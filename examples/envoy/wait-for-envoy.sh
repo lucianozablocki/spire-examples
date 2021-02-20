@@ -5,23 +5,35 @@ norm='\033[0m'
 red='\033[0;31m'
 
 i=0
-while [ "$i" -lt 30 ]; do
+LOGLINE="all dependencies initialized. starting workers"
+while [ "${i}" -lt 30 ]; do
   i=$(( i+1 ))
-  LOGLINE="all dependencies initialized. starting workers"
-
+  
   if [ -z "$(grep "${LOGLINE}" envoy.log)" ]; then
-    echo "${1}'s envoy is not ready yet, sleeping for a while..."
+    echo "LOGLINE was not found yet..."
+    # sleep 5
+    # continue
+  else
+    echo "LOGLINE found!"
+    date
+  fi
+
+  CERT=$(wget -qO- http://localhost:9901/certs | grep ${1})
+
+  if [ -z "${CERT}" ]; then
+    echo "${2}'s envoy is not ready yet, sleeping for a while..."
     sleep 5
     continue
   fi
 
-  echo -e "${bold}${1}'s envoy is ready!${norm}"
+  echo -e "${bold}${2}'s envoy is ready!${norm}"
+  date
   ENVOY_READY=true
   break
 done
 
 if [ -z "${ENVOY_READY}" ]; then
-  echo "${red}Timed out waiting for ${1}'s envoy${norm}"
+  echo -e "${red}Timed out waiting for ${2}'s envoy${norm}"
   exit 1
 fi
 exit 0

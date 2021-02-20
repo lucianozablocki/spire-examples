@@ -18,7 +18,8 @@ data:
       log_level = "DEBUG"
       server_address = "spire-server"
       server_port = "8081"
-      socket_path = "/run/spire/sockets/agent.sock"
+      # socket_path = "/run/spire/sockets/agent.sock"
+      socket_path = "/tmp/spire-agent/public/api.sock"
       trust_bundle_path = "/run/spire/config/bootstrap.crt"
       trust_domain = "example.org"
     }
@@ -95,25 +96,25 @@ spec:
           args: ["-t", "30", "spire-server:8081"]
       containers:
         - name: spire-agent
-          image: gcr.io/spiffe-io/spire-agent:0.11.0
+          image: gcr.io/spiffe-io/spire-agent@sha256:e93e6879cc2a231a4983444312d8c32523c1106f388df275dca0db484cca312f
           args: ["-config", "/run/spire/config/agent.conf"]
           volumeMounts:
             - name: spire-config
               mountPath: /run/spire/config
               readOnly: true
             - name: spire-agent-socket
-              mountPath: /run/spire/sockets
+              mountPath: /tmp/spire-agent/public
               readOnly: false
           livenessProbe:
             exec:
-              command: ["/opt/spire/bin/spire-agent", "healthcheck", "-socketPath", "/run/spire/sockets/agent.sock"]
+              command: ["/opt/spire/bin/spire-agent", "healthcheck", "-socketPath", "/tmp/spire-agent/public/api.sock"]
             failureThreshold: 2
             initialDelaySeconds: 15
             periodSeconds: 60
             timeoutSeconds: 3
           readinessProbe:
             exec:
-              command: ["/opt/spire/bin/spire-agent", "healthcheck", "-socketPath", "/run/spire/sockets/agent.sock", "--shallow"]
+              command: ["/opt/spire/bin/spire-agent", "healthcheck", "-socketPath", "/tmp/spire-agent/public/api.sock", "--shallow"]
             initialDelaySeconds: 5
             periodSeconds: 5
       volumes:
@@ -122,5 +123,5 @@ spec:
             name: spire-agent
         - name: spire-agent-socket
           hostPath:
-            path: /run/spire/sockets
+            path: /tmp/spire-agent/public
             type: DirectoryOrCreate

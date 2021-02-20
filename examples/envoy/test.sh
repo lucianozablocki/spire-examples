@@ -7,6 +7,18 @@ norm=$(tput sgr0) || true
 red=$(tput setaf 1) || true
 green=$(tput setaf 2) || true
 
+gen_logs() {
+  ECHO_CONTAINER_ID=$(docker container ls -qf "name=echo")
+  WEB_CONTAINER_ID=$(docker container ls -qf "name=web")
+  SPIRE_CONTAINER_ID=$(docker container ls -qf "name=spire-server")
+
+  docker cp "$ECHO_CONTAINER_ID":tmp/envoy.log xenvoy-echo-0.12.0.txt
+  docker cp "$WEB_CONTAINER_ID":tmp/envoy.log xenvoy-web-0.12.0.txt
+  docker cp "$ECHO_CONTAINER_ID":opt/spire/agent.log xagent-echo-0.12.0.txt
+  docker cp "$WEB_CONTAINER_ID":opt/spire/agent.log xagent-web-0.12.0.txt
+  docker cp "$SPIRE_CONTAINER_ID":opt/spire/server.log xserver-0.12.0.txt
+}
+
 search_occurrences() {
   echo "$1" | grep -e "$2"
 }
@@ -24,7 +36,7 @@ set_env() {
   "${DIR}"/3-create-registration-entries.sh > /dev/null
 }
 
-trap cleanup EXIT
+# trap cleanup EXIT
 
 echo "${bold}Preparing environment...${norm}"
 
@@ -38,9 +50,8 @@ docker cp "${DIR}"/wait-for-envoy.sh "$ECHO_CONTAINER_ID":/tmp
 docker cp "${DIR}"/wait-for-envoy.sh "$WEB_CONTAINER_ID":/tmp
 
 echo "${bold}Waiting for envoy...${norm}"
-
-docker exec -w /tmp "$ECHO_CONTAINER_ID" sh wait-for-envoy.sh Echo
-docker exec -w /tmp "$WEB_CONTAINER_ID" sh wait-for-envoy.sh Web
+docker exec -w /tmp "$ECHO_CONTAINER_ID" sh wait-for-envoy.sh spiffe://domain.test/echo-server Echo
+docker exec -w /tmp "$WEB_CONTAINER_ID" sh wait-for-envoy.sh spiffe://domain.test/web-server Web
 
 echo "${bold}Running test...${norm}"
 
@@ -84,6 +95,36 @@ else
   echo "${red}Envoy to Envoy mTLS connection test failed${norm}"
   FAILED=true
 fi
+
+# sleep 20
+
+# TLS_RESPONSE=$(curl -s http://localhost:8080/?route=envoy-to-envoy-tls)
+
+# if [[ $( echo "$(search_occurrences "$TLS_RESPONSE" "$SECRET_PASS_HEADER")" | wc -l) -eq 2 ]] && 
+#    [[ -n $(search_occurrences "$TLS_RESPONSE" "$EXPECTED_TIMEOUT_HEADER") ]] &&
+#    [[ -n $(search_occurrences "$TLS_RESPONSE" "$FORWARDED_PROTOCOL_HEADER") ]] &&
+#    [[ -n $(search_occurrences "$TLS_RESPONSE" "$REQUEST_ID_HEADER") ]]; then
+#     echo "${green}Envoy to Envoy TLS connection test succeded${norm}"
+# else
+#   echo "${red}Envoy to Envoy TLS connection test failed${norm}"
+#   FAILED=true
+# fi
+
+# MTLS_RESPONSE=$(curl -s http://localhost:8080/?route=envoy-to-envoy-mtls)
+
+# if [[ "$( echo "$(search_occurrences "$MTLS_RESPONSE" "$SECRET_PASS_HEADER")" | wc -l)" -eq 2 ]] && 
+#    [[ -n $(search_occurrences "$MTLS_RESPONSE" "$EXPECTED_TIMEOUT_HEADER") ]] &&
+#    [[ -n $(search_occurrences "$MTLS_RESPONSE" "$FORWARDED_PROTOCOL_HEADER") ]] &&
+#    [[ -n $(search_occurrences "$MTLS_RESPONSE" "$REQUEST_ID_HEADER") ]] &&
+#    [[ -n $(search_occurrences "$MTLS_RESPONSE" "$FORWARDED_CLIENT_HEADER") ]] &&
+#    [[ -n $(search_occurrences "$MTLS_RESPONSE" "$CLIENT_SPIFFE_ID") ]]; then
+#     echo "${green}Envoy to Envoy mTLS connection test succeded${norm}"
+# else
+#   echo "${red}Envoy to Envoy mTLS connection test failed${norm}"
+#   FAILED=true
+# fi
+
+# gen_logs
 
 if [ -n "${FAILED}" ]; then
   echo "${red}There were test failures${norm}"

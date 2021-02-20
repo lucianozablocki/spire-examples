@@ -66,7 +66,7 @@ Next, we'll get shell into the running workload container so we can interact
 with the SPIRE workload API:
 
 ```
-$ kubectl exec -it $(kubectl get pods --selector=app=client --output=jsonpath="{..metadata.name}") /bin/sh
+$ kubectl exec -it $(kubectl get pods --selector=app=client --output=jsonpath="{..metadata.name}") -- /bin/sh
 /opt/spire # 
 ```
 
@@ -78,7 +78,7 @@ We'll now see that the workload is not attested to SPIRE because we haven't
 yet created any registration entries.
 
 ```
-/opt/spire # bin/spire-agent api fetch -socketPath /run/spire/sockets/agent.sock 
+/opt/spire # bin/spire-agent api fetch -socketPath /tmp/spire-agent/public/api.sock
 rpc error: code = PermissionDenied desc = no identity issued
 ```
 
@@ -132,7 +132,7 @@ workload has now been attested (this might take 30-60 seconds or so after
 creating the registration entries):
 
 ```
-/opt/spire # bin/spire-agent api fetch -socketPath /run/spire/sockets/agent.sock 
+/opt/spire # bin/spire-agent api fetch -socketPath /tmp/spire-agent/public/api.sock
 Received 1 bundle after 10.08623ms
 
 SPIFFE ID:		spiffe://example.org/client
